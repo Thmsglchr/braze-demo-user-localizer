@@ -1,0 +1,18 @@
+{
+  "name": "braze-demo-user-localizer",
+  "version": "1.0.0",
+  "description": "A tool to generate and upload demo users to Braze with realistic location and identity data.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Thomas G.T.",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
+  }
+}
