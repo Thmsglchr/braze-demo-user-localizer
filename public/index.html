@@ -1,11 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Braze Demo User Localizer</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    /* Keep your existing styles here... */
+    @font-face {
+      font-family: 'Aribau Grotesk';
+      src: url('/AribauGrotesk-Regular.woff2') format('woff2'),
+           url('/AribauGrotesk-Regular.woff') format('woff');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Aribau Grotesk';
+      src: url('/AribauGrotesk-Bold.woff2') format('woff2'),
+           url('/AribauGrotesk-Bold.woff') format('woff');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
     :root {
       --braze-purple: #801ED7;
       --braze-orange: #FFA524;
@@ -36,6 +51,19 @@
       flex-direction: column;
       align-items: center;
     }
+    .logo-large {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 14px;
+      width: 100%;
+    }
+    .logo-large img {
+      height: 78px;
+      max-width: 80%;
+      display: block;
+      margin: 0 auto;
+    }
     h1 {
       color: var(--braze-purple);
       font-weight: 700;
@@ -44,12 +72,26 @@
       text-align: center;
       letter-spacing: 0.01em;
     }
+    form {
+      width: 100%;
+    }
     label {
       display: block;
       font-weight: 600;
       margin: 18px 0 8px 0;
       color: var(--braze-purple);
       letter-spacing: 0.01em;
+    }
+    .config-doc {
+      display: block;
+      background: #ede3fc;
+      color: #432b77;
+      font-size: 0.99em;
+      padding: 10px 16px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      line-height: 1.45;
+      font-weight: 400;
     }
     input, textarea {
       width: 100%;
@@ -63,6 +105,10 @@
       box-sizing: border-box;
       font-family: inherit;
       transition: border 0.2s;
+    }
+    input:focus, textarea:focus {
+      border: 1.7px solid var(--braze-purple);
+      outline: none;
     }
     textarea {
       min-height: 170px;
@@ -87,6 +133,13 @@
       background: var(--braze-orange);
       color: #322245;
     }
+    .footer {
+      color: #a89bc0;
+      font-size: 1.08em;
+      text-align: center;
+      margin-bottom: 16px;
+      letter-spacing: 0.01em;
+    }
     #result {
       display: none;
       margin-top: 24px;
@@ -99,65 +152,49 @@
       color: var(--braze-purple);
       border: 1px solid #e1d6fa;
       min-height: 24px;
-      word-break: break-word;
-      max-height: 300px;
-      overflow-y: auto;
-      font-family: monospace;
+      word-break: break-all;
+    }
+    @media (max-width: 700px) {
+      .container { padding: 16px 2vw; }
+      .logo-large img { height: 46px; }
+      h1 { font-size: 1.25rem; }
+      .config-doc { font-size: 0.95em; padding: 8px 8px;}
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <div class="logo-large">
+      <img src="/braze-logo.png" alt="Braze logo">
+    </div>
     <h1>Braze Demo User Localizer</h1>
     <form id="localizerForm" autocomplete="off">
       <label for="apiKey">Braze API Key:</label>
-      <input
-        type="password"
-        id="apiKey"
-        name="apiKey"
-        required
-        placeholder="Paste your REST API key"
-        autocomplete="off"
-      />
+      <input type="password" id="apiKey" name="apiKey" required placeholder="Paste your REST API key" autocomplete="off">
 
       <label for="apiEndpoint">Braze Dashboard Server:</label>
-      <input
-        type="text"
-        id="apiEndpoint"
-        name="apiEndpoint"
-        required
-        value="https://rest.fra-02.braze.eu/"
-      />
+      <input type="text" id="apiEndpoint" name="apiEndpoint" 
+             required 
+             value="https://rest.fra-02.braze.eu/">
 
-      <label for="totalUsers">Total Users (max 10000):</label>
-      <input
-        type="number"
-        id="totalUsers"
-        name="totalUsers"
-        value="100"
-        min="1"
-        max="10000"
-        required
-      />
+      <label for="totalUsers">Total Users:</label>
+      <input type="number" id="totalUsers" name="totalUsers" value="100" min="1" max="10000" required>
 
       <label for="idPrefix">ID Prefix:</label>
-      <input
-        type="text"
-        id="idPrefix"
-        name="idPrefix"
-        value="DEMO"
-        required
-        maxlength="12"
-      />
+      <input type="text" id="idPrefix" name="idPrefix" value="DEMO" required maxlength="12">
 
       <label for="config">CONFIG JSON:</label>
-      <textarea
-        id="config"
-        name="config"
-        required
-        rows="15"
-        cols="80"
-      >{
+      <div class="config-doc">
+        <b>CONFIG format documentation:</b><br>
+        <b>label</b>: Group name (for your reference)<br>
+        <b>weight</b>: Probability this group is chosen (must total 1 across groups)<br>
+        <b>country</b>, <b>language</b>, <b>time_zone</b>: Fixed values for users in this group<br>
+        <b>cities</b>: List of cities (one picked randomly per user)<br>
+        <b>first_names_male</b>, <b>first_names_female</b>: List of possible first names (by gender)<br>
+        <b>last_names</b>: List of surnames<br>
+        <i>Edit or extend the example below for your use case.</i>
+      </div>
+      <textarea id="config" name="config" required rows="15" cols="80">{
   "groups": [
     {
       "label": "French users",
@@ -183,127 +220,35 @@
     }
   ]
 }</textarea>
-
       <button type="submit">Send to Braze</button>
     </form>
-
     <div id="result"></div>
   </div>
-
   <div class="footer" id="footer-year">
     Thomas G.T. — Braze Demo User Localizer — <span id="year"></span>
   </div>
-
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Weighted random pick helper
-    function pickWeightedGroup(groups) {
-      const r = Math.random();
-      let sum = 0;
-      for (const g of groups) {
-        sum += Number(g.weight);
-        if (r < sum) return g;
-      }
-      return groups[groups.length - 1];
-    }
-
-    // Pick random element helper
-    function pickRandom(arr) {
-      if (!Array.isArray(arr) || arr.length === 0) return '';
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
-
-    // Random gender helper
-    function getGender() {
-      return Math.random() < 0.5 ? 'male' : 'female';
-    }
-
-    // Send a batch of users to backend
-    async function sendBatch(batch, apiKey, apiEndpoint) {
-      const baseUrl = apiEndpoint.replace(/\/+$/, '');
-      const url = `${baseUrl}/generate-batch`;
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey, batch }),
-      });
-      return await res.text();
-    }
-
     document.getElementById('localizerForm').onsubmit = async (e) => {
       e.preventDefault();
-
       const resultDiv = document.getElementById('result');
-      resultDiv.style.display = 'block';
-      resultDiv.textContent = '';
-
+      resultDiv.style.display = 'block'; // Show on submit
       const data = Object.fromEntries(new FormData(e.target));
-
-      // Parse config JSON
       try {
         data.config = JSON.parse(data.config);
       } catch {
         resultDiv.textContent = 'Invalid JSON in CONFIG!';
         return;
       }
-
-      // Enforce user limit
-      let totalUsers = parseInt(data.totalUsers, 10);
-      if (totalUsers > 10000) {
-        resultDiv.textContent = 'Total users capped at 10,000.\n';
-        totalUsers = 10000;
-      } else if (totalUsers < 1) {
-        resultDiv.textContent = 'Total users must be at least 1.';
-        return;
-      }
-
-      resultDiv.textContent = `⏳ Generating ${totalUsers} users...\n`;
-
-      // Generate users
-      const users = [];
-      for (let i = 1; i <= totalUsers; i++) {
-        const group = pickWeightedGroup(data.config.groups);
-        const gender = getGender();
-        const firstName =
-          gender === 'male'
-            ? pickRandom(group.first_names_male)
-            : pickRandom(group.first_names_female);
-        users.push({
-          external_id: data.idPrefix + i,
-          country: group.country,
-          language: group.language,
-          time_zone: group.time_zone,
-          home_city: pickRandom(group.cities),
-          first_name: firstName,
-          last_name: pickRandom(group.last_names),
-          gender,
-        });
-      }
-
-      // Batch upload sequentially
-      const BATCH_SIZE = 75;
-      let batchNumber = 0;
-      for (let i = 0; i < users.length; i += BATCH_SIZE) {
-        batchNumber++;
-        const batch = users.slice(i, i + BATCH_SIZE);
-        resultDiv.textContent += `Sending batch ${batchNumber} (${batch.length} users)...\n`;
-        try {
-          const responseText = await sendBatch(
-            batch,
-            data.apiKey,
-            data.apiEndpoint
-          );
-          resultDiv.textContent += `Batch ${batchNumber} response: ${responseText}\n\n`;
-          resultDiv.scrollTop = resultDiv.scrollHeight;
-        } catch (err) {
-          resultDiv.textContent += `Batch ${batchNumber} error: ${err.message}\n\n`;
-          break;
-        }
-      }
-
-      resultDiv.textContent += '✅ All done!\n';
+      resultDiv.textContent = '⏳ Sending...';
+      const res = await fetch('/generate-and-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const text = await res.text();
+      resultDiv.textContent = text;
     };
   </script>
 </body>
