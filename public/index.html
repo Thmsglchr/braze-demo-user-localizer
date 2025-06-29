@@ -5,8 +5,88 @@
   <title>Braze Demo User Localizer</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    /* (Same styles as before, omitted for brevity; keep your existing styles) */
-    /* Just ensure #result starts hidden and uses pre-wrap */
+    /* Keep your existing styles here... */
+    :root {
+      --braze-purple: #801ED7;
+      --braze-orange: #FFA524;
+      --background: #fff;
+      --form-bg: #faf7fc;
+      --shadow: 0 4px 24px 0 rgba(128, 30, 215, 0.09);
+      --radius: 16px;
+    }
+    body {
+      background: var(--background);
+      font-family: 'Aribau Grotesk', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .container {
+      background: var(--form-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 36px 30px 24px 30px;
+      max-width: 540px;
+      margin: 48px auto 28px auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: var(--braze-purple);
+      font-weight: 700;
+      font-size: 2.1rem;
+      margin: 0 0 28px 0;
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin: 18px 0 8px 0;
+      color: var(--braze-purple);
+      letter-spacing: 0.01em;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 7px;
+      border: 1px solid #d2cbe2;
+      font-size: 1rem;
+      background: #fff;
+      color: #3a3256;
+      margin-bottom: 5px;
+      box-sizing: border-box;
+      font-family: inherit;
+      transition: border 0.2s;
+    }
+    textarea {
+      min-height: 170px;
+      resize: vertical;
+    }
+    button {
+      background: var(--braze-purple);
+      color: #fff;
+      font-weight: 600;
+      font-size: 1.11rem;
+      padding: 13px 0;
+      border-radius: 7px;
+      border: none;
+      margin-top: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      box-shadow: 0 2px 8px 0 rgba(128, 30, 215, 0.06);
+      font-family: inherit;
+    }
+    button:hover {
+      background: var(--braze-orange);
+      color: #322245;
+    }
     #result {
       display: none;
       margin-top: 24px;
@@ -14,9 +94,9 @@
       font-size: 1em;
       padding: 14px;
       background: #f5ecff;
-      border-radius: 16px;
+      border-radius: var(--radius);
       box-shadow: 0 2px 10px 0 rgba(128, 30, 215, 0.07);
-      color: #801ED7;
+      color: var(--braze-purple);
       border: 1px solid #e1d6fa;
       min-height: 24px;
       word-break: break-word;
@@ -28,7 +108,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- Your existing logo, heading, and form inputs -->
     <h1>Braze Demo User Localizer</h1>
     <form id="localizerForm" autocomplete="off">
       <label for="apiKey">Braze API Key:</label>
@@ -110,6 +189,7 @@
 
     <div id="result"></div>
   </div>
+
   <div class="footer" id="footer-year">
     Thomas G.T. — Braze Demo User Localizer — <span id="year"></span>
   </div>
@@ -117,7 +197,7 @@
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Helpers for weighted random selection
+    // Weighted random pick helper
     function pickWeightedGroup(groups) {
       const r = Math.random();
       let sum = 0;
@@ -128,25 +208,28 @@
       return groups[groups.length - 1];
     }
 
+    // Pick random element helper
     function pickRandom(arr) {
       if (!Array.isArray(arr) || arr.length === 0) return '';
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
+    // Random gender helper
     function getGender() {
       return Math.random() < 0.5 ? 'male' : 'female';
     }
 
+    // Send a batch of users to backend
     async function sendBatch(batch, apiKey, apiEndpoint) {
       const baseUrl = apiEndpoint.replace(/\/+$/, '');
       const url = `${baseUrl}/generate-batch`;
+
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey, batch }),
       });
-      const text = await res.text();
-      return text;
+      return await res.text();
     }
 
     document.getElementById('localizerForm').onsubmit = async (e) => {
@@ -158,6 +241,7 @@
 
       const data = Object.fromEntries(new FormData(e.target));
 
+      // Parse config JSON
       try {
         data.config = JSON.parse(data.config);
       } catch {
@@ -165,10 +249,10 @@
         return;
       }
 
-      // Enforce max users limit
+      // Enforce user limit
       let totalUsers = parseInt(data.totalUsers, 10);
       if (totalUsers > 10000) {
-        resultDiv.textContent = 'Total users capped at 10,000.';
+        resultDiv.textContent = 'Total users capped at 10,000.\n';
         totalUsers = 10000;
       } else if (totalUsers < 1) {
         resultDiv.textContent = 'Total users must be at least 1.';
@@ -177,7 +261,7 @@
 
       resultDiv.textContent = `⏳ Generating ${totalUsers} users...\n`;
 
-      // Generate users in JS:
+      // Generate users
       const users = [];
       for (let i = 1; i <= totalUsers; i++) {
         const group = pickWeightedGroup(data.config.groups);
@@ -198,15 +282,13 @@
         });
       }
 
-      // Send batches sequentially:
+      // Batch upload sequentially
       const BATCH_SIZE = 75;
       let batchNumber = 0;
-
       for (let i = 0; i < users.length; i += BATCH_SIZE) {
         batchNumber++;
         const batch = users.slice(i, i + BATCH_SIZE);
         resultDiv.textContent += `Sending batch ${batchNumber} (${batch.length} users)...\n`;
-
         try {
           const responseText = await sendBatch(
             batch,
@@ -214,13 +296,13 @@
             data.apiEndpoint
           );
           resultDiv.textContent += `Batch ${batchNumber} response: ${responseText}\n\n`;
-          // Scroll down so user sees latest log
           resultDiv.scrollTop = resultDiv.scrollHeight;
         } catch (err) {
           resultDiv.textContent += `Batch ${batchNumber} error: ${err.message}\n\n`;
           break;
         }
       }
+
       resultDiv.textContent += '✅ All done!\n';
     };
   </script>

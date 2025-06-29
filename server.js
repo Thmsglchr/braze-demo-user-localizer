@@ -10,6 +10,7 @@ app.use(bodyParser.json({ limit: '2mb' }));
 app.post('/generate-batch', async (req, res) => {
   try {
     const { apiKey, batch } = req.body;
+    let apiEndpoint = req.body.apiEndpoint || '';
 
     if (!Array.isArray(batch) || batch.length === 0) {
       return res.status(400).send('Batch must be a non-empty array of users');
@@ -17,24 +18,12 @@ app.post('/generate-batch', async (req, res) => {
     if (!apiKey || typeof apiKey !== 'string') {
       return res.status(400).send('API key is required');
     }
-
-    // Braze API URL - note no trailing slash assumed here
-    // You may harden this by validating the URL format
-    const brazeBaseUrl = req.headers['x-braze-base-url'] || null;
-
-    // Fallback: expect client sends full URL (better practice)
-    // For now use hardcoded for demonstration:
-    // const brazeBaseUrl = 'https://rest.fra-02.braze.eu';
-
-    // In our setup, use client submitted base URL:
-    let brazeBaseUrlClient = req.body.apiEndpoint || '';
-    brazeBaseUrlClient = brazeBaseUrlClient.replace(/\/+$/, '');
-
-    const brazeUrl = `${brazeBaseUrlClient}/users/track`;
+    apiEndpoint = apiEndpoint.replace(/\/+$/, '');
+    const url = `${apiEndpoint}/users/track`;
 
     const payload = { attributes: batch };
 
-    const response = await fetch(brazeUrl, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -44,7 +33,6 @@ app.post('/generate-batch', async (req, res) => {
     });
 
     const text = await response.text();
-
     res.status(response.status).send(text);
   } catch (err) {
     console.error('Error in /generate-batch:', err);
