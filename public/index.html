@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Braze Demo User Localizer</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     @font-face {
       font-family: 'Aribau Grotesk';
@@ -152,7 +152,10 @@
       color: var(--braze-purple);
       border: 1px solid #e1d6fa;
       min-height: 24px;
-      word-break: break-all;
+      word-break: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
     }
     @media (max-width: 700px) {
       .container { padding: 16px 2vw; }
@@ -165,23 +168,49 @@
 <body>
   <div class="container">
     <div class="logo-large">
-      <img src="/braze-logo.png" alt="Braze logo">
+      <img src="/braze-logo.png" alt="Braze logo" />
     </div>
     <h1>Braze Demo User Localizer</h1>
     <form id="localizerForm" autocomplete="off">
       <label for="apiKey">Braze API Key:</label>
-      <input type="password" id="apiKey" name="apiKey" required placeholder="Paste your REST API key" autocomplete="off">
+      <input
+        type="password"
+        id="apiKey"
+        name="apiKey"
+        required
+        placeholder="Paste your REST API key"
+        autocomplete="off"
+      />
 
       <label for="apiEndpoint">Braze Dashboard Server:</label>
-      <input type="text" id="apiEndpoint" name="apiEndpoint" 
-             required 
-             value="https://rest.fra-02.braze.eu/">
+      <input
+        type="text"
+        id="apiEndpoint"
+        name="apiEndpoint"
+        required
+        value="https://rest.fra-02.braze.eu/"
+      />
 
-      <label for="totalUsers">Total Users:</label>
-      <input type="number" id="totalUsers" name="totalUsers" value="100" min="1" max="10000" required>
+      <label for="totalUsers">Total Users (max 10000):</label>
+      <input
+        type="number"
+        id="totalUsers"
+        name="totalUsers"
+        value="100"
+        min="1"
+        max="10000"
+        required
+      />
 
       <label for="idPrefix">ID Prefix:</label>
-      <input type="text" id="idPrefix" name="idPrefix" value="DEMO" required maxlength="12">
+      <input
+        type="text"
+        id="idPrefix"
+        name="idPrefix"
+        value="DEMO"
+        required
+        maxlength="12"
+      />
 
       <label for="config">CONFIG JSON:</label>
       <div class="config-doc">
@@ -194,7 +223,13 @@
         <b>last_names</b>: List of surnames<br>
         <i>Edit or extend the example below for your use case.</i>
       </div>
-      <textarea id="config" name="config" required rows="15" cols="80">{
+      <textarea
+        id="config"
+        name="config"
+        required
+        rows="15"
+        cols="80"
+      >{
   "groups": [
     {
       "label": "French users",
@@ -220,20 +255,26 @@
     }
   ]
 }</textarea>
+
       <button type="submit">Send to Braze</button>
     </form>
+
     <div id="result"></div>
   </div>
+
   <div class="footer" id="footer-year">
     Thomas G.T. — Braze Demo User Localizer — <span id="year"></span>
   </div>
+
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
 
     document.getElementById('localizerForm').onsubmit = async (e) => {
       e.preventDefault();
       const resultDiv = document.getElementById('result');
-      resultDiv.style.display = 'block'; // Show on submit
+      resultDiv.style.display = 'block'; // Show log div
+      resultDiv.textContent = '';
+
       const data = Object.fromEntries(new FormData(e.target));
       try {
         data.config = JSON.parse(data.config);
@@ -241,14 +282,40 @@
         resultDiv.textContent = 'Invalid JSON in CONFIG!';
         return;
       }
-      resultDiv.textContent = '⏳ Sending...';
-      const res = await fetch('/generate-and-upload', {
+
+      if (+data.totalUsers > 10000) {
+        resultDiv.textContent = 'Total users capped at 10,000.\n';
+        data.totalUsers = "10000";
+      }
+      if (+data.totalUsers < 1) {
+        resultDiv.textContent = 'Total users must be at least 1.';
+        return;
+      }
+
+      const response = await fetch('/generate-and-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      const text = await res.text();
-      resultDiv.textContent = text;
+
+      if (!response.body) {
+        resultDiv.textContent = 'Streaming not supported by server.';
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          resultDiv.textContent += chunk;
+          resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+      }
     };
   </script>
 </body>

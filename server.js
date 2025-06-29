@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = (...args) =>
+  import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 app.use(express.static('public'));
@@ -64,17 +65,22 @@ app.post('/generate-and-upload', async (req, res) => {
     const baseUrl = apiEndpoint.replace(/\/+$/, '');
     const url = `${baseUrl}/users/track`;
 
-    // Debug logs
-    console.log('Braze endpoint:', url);
-    console.log('Number of users to send:', users.length);
+    // Set streaming headers
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Transfer-Encoding': 'chunked',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
 
-    // Send to Braze in batches of 75
     const BATCH_SIZE = 75;
-    let allResponses = [];
     for (let i = 0; i < users.length; i += BATCH_SIZE) {
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
       const batch = users.slice(i, i + BATCH_SIZE);
       const payload = { attributes: batch };
-      console.log(`Sending batch ${Math.floor(i/BATCH_SIZE)+1}:`, JSON.stringify(payload, null, 2).substring(0, 300) + ' ...');
+
+      res.write(`Sending batch ${batchNum} (${batch.length} users)...\n`);
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -84,12 +90,15 @@ app.post('/generate-and-upload', async (req, res) => {
         body: JSON.stringify(payload)
       });
       const text = await response.text();
-      allResponses.push(`Batch ${Math.floor(i/BATCH_SIZE)+1}: ${text}`);
-      // Throttle: Braze recommends at least ~75ms, here 150ms for safety
+
+      res.write(`Batch ${batchNum} response: ${text}\n\n`);
+
+      // Throttle: Braze recommends at least ~75ms between requests; 150ms for safety
       await new Promise(r => setTimeout(r, 150));
     }
 
-    res.status(200).send(allResponses.join('\n\n'));
+    res.write('✅ All batches processed!\n');
+    res.end();
   } catch (err) {
     console.error('ERROR:', err);
     res.status(500).send('Error: ' + err.message);
