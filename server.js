@@ -14,7 +14,7 @@ function pickWeightedGroup(groups) {
     sum += Number(g.weight);
     if (r < sum) return g;
   }
-  // Fallback if rounding issue
+  // fallback if rounding errors
   return groups[groups.length - 1];
 }
 
@@ -29,83 +29,73 @@ function getGender() {
 
 app.post('/generate-and-upload', async (req, res) => {
   try {
-    const apiKey = req.body.apiKey;
-    const apiEndpoint = req.body.apiEndpoint;
-    const config = req.body.config;
-    const totalUsers = parseInt(req.body.totalUsers, 10) || 1;
-    const idPrefix = req.body.idPrefix || "DEMO";
+    const { apiKey, apiEndpoint, config, totalUsers, idPrefix } = req.body;
+
+    if (!apiKey || !apiEndpoint || !config || !config.groups) {
+      res.status(400).send('Missing required parameters');
+      return;
+    }
 
     const groups = config.groups;
+    const userCount = Math.min(parseInt(totalUsers, 10) || 1, 10000);
+    const prefix = idPrefix || 'DEMO';
 
-    let users = [];
-    for (let i = 1; i <= totalUsers; i++) {
-      // Pick a group based on weights
+    // Generate user profiles
+    const users = [];
+    for (let i = 1; i <= userCount; i++) {
       const group = pickWeightedGroup(groups);
-
-      // Gender for random first name
       const gender = getGender();
-      const firstName = gender === 'male'
-        ? pickRandom(group.first_names_male)
-        : pickRandom(group.first_names_female);
+      const firstName =
+        gender === 'male'
+          ? pickRandom(group.first_names_male)
+          : pickRandom(group.first_names_female);
 
-      // Compose full user profile
       users.push({
-        external_id: idPrefix + i,
+        external_id: prefix + i,
         country: group.country,
         language: group.language,
         time_zone: group.time_zone,
         home_city: pickRandom(group.cities),
         first_name: firstName,
         last_name: pickRandom(group.last_names),
-        gender: gender
+        gender,
       });
     }
 
-    // Braze endpoint
     const baseUrl = apiEndpoint.replace(/\/+$/, '');
     const url = `${baseUrl}/users/track`;
 
-    // Set streaming headers
-    res.writeHead(200, {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Transfer-Encoding': 'chunked',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    });
-
+    // Send batches synchronously and accumulate responses
     const BATCH_SIZE = 75;
+    let allResponses = [];
+
     for (let i = 0; i < users.length; i += BATCH_SIZE) {
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
       const batch = users.slice(i, i + BATCH_SIZE);
       const payload = { attributes: batch };
-
-      res.write(`Sending batch ${batchNum} (${batch.length} users)...\n`);
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const text = await response.text();
+      allResponses.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${text}`);
 
-      res.write(`Batch ${batchNum} response: ${text}\n\n`);
-
-      // Throttle: Braze recommends at least ~75ms between requests; 150ms for safety
-      await new Promise(r => setTimeout(r, 150));
+      // Respect Braze rate limits: pause 150ms between batches
+      await new Promise((r) => setTimeout(r, 150));
     }
 
-    res.write('✅ All batches processed!\n');
-    res.end();
+    res.status(200).send(allResponses.join('\n\n'));
   } catch (err) {
-    console.error('ERROR:', err);
+    console.error('Error:', err);
     res.status(500).send('Error: ' + err.message);
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log('Server running on port', PORT);
+  console.log('Server listening on port', PORT);
 });

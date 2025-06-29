@@ -272,14 +272,18 @@
     document.getElementById('localizerForm').onsubmit = async (e) => {
       e.preventDefault();
       const resultDiv = document.getElementById('result');
-      resultDiv.style.display = 'block'; // Show log div
-      resultDiv.textContent = '';
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+
+      resultDiv.style.display = 'block';
+      resultDiv.textContent = 'Sending data... You will be informed when the process is finished.\n';
 
       const data = Object.fromEntries(new FormData(e.target));
       try {
         data.config = JSON.parse(data.config);
       } catch {
         resultDiv.textContent = 'Invalid JSON in CONFIG!';
+        submitBtn.disabled = false;
         return;
       }
 
@@ -289,32 +293,22 @@
       }
       if (+data.totalUsers < 1) {
         resultDiv.textContent = 'Total users must be at least 1.';
+        submitBtn.disabled = false;
         return;
       }
 
-      const response = await fetch('/generate-and-upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.body) {
-        resultDiv.textContent = 'Streaming not supported by server.';
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          resultDiv.textContent += chunk;
-          resultDiv.scrollTop = resultDiv.scrollHeight;
-        }
+      try {
+        const response = await fetch('/generate-and-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const text = await response.text();
+        resultDiv.textContent = text;
+      } catch (err) {
+        resultDiv.textContent = 'Error: ' + err.message;
+      } finally {
+        submitBtn.disabled = false;
       }
     };
   </script>
