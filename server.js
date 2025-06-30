@@ -41,6 +41,14 @@ app.post('/generate-and-upload', async (req, res) => {
     const prefix = idPrefix || 'DEMO';
 
     // Generate user profiles
+    function normalizeForEmail(str) {
+      return str
+        .toLowerCase()
+        .normalize("NFD") // decompose accents
+        .replace(/[\u0300-\u036f]/g, "") // remove accents
+        .replace(/[^a-z0-9]/g, ""); // remove non-alphanumeric chars
+    }
+
     const users = [];
     for (let i = 1; i <= userCount; i++) {
       const group = pickWeightedGroup(groups);
@@ -49,6 +57,9 @@ app.post('/generate-and-upload', async (req, res) => {
         gender === 'male'
           ? pickRandom(group.first_names_male)
           : pickRandom(group.first_names_female);
+      const lastName = pickRandom(group.last_names);
+
+      const email = `${normalizeForEmail(firstName)}.${normalizeForEmail(lastName)}@braze-demo.com`;
 
       users.push({
         external_id: prefix + i,
@@ -57,7 +68,8 @@ app.post('/generate-and-upload', async (req, res) => {
         time_zone: group.time_zone,
         home_city: pickRandom(group.cities),
         first_name: firstName,
-        last_name: pickRandom(group.last_names),
+        last_name: lastName,
+        email: email,
         gender,
       });
     }
